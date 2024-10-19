@@ -175,10 +175,10 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(-1, 1, 100, degrees_clockwise/10);
+    move_PID(1, -1, 100, degrees_clockwise/10);
   } else
   {
-    move_PID(1, -1, 100, -degrees_clockwise/10);
+    move_PID(-1, 1, 100, -degrees_clockwise/10);
   } 
   delay(200);
 }
