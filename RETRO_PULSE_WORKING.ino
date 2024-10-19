@@ -1,30 +1,32 @@
-const int MLE = 2;
-const int MLA = 4;
-const int MLB = 3;
-const int MRA = 6;
-const int MRB = 5;
-const int MRE = 7;
-const int INL = 19;
-const int INR = 18;
+// Pin Constants
+const int MLE = 7;
+const int MLA = 6;
+const int MLB = 5;
+const int MRA = 4;
+const int MRB = 3;
+const int MRE = 2;
+const int INL = 18;
+const int INR = 19;
 const int BUTTON = 21;
 
+// Motor control constants
 const float K_P = 0.125;
 const float K_I = 0.000005;
 const float K_D = 250;
 const int DELAY = 50;
+const float L2R_RATIO = 0.7;
 
-const float l2r_power_ratio = 1.2;
-
-const int PULSE_POWER = 200;
+// Pulse constants
+const int PULSE_POWER = 255;
 const int PULSE_DELAY = 50;
 
 class Motor
 {
   public:
     Motor(int InA, int InB, int En, int Interrupt):InA(InA), InB(InB), En(En), Interrupt(Interrupt){};
-    float power = 0;
+    volatile float power = 0;
     volatile int ticks = 0;
-    float prev_power = 1;
+    volatile float prev_power = 1;
 
     void run()
     {
@@ -115,8 +117,8 @@ int right_ticks()
 
 void retro_pulse(int left_direction, int right_direction)
 {
-  left_motor.set_power(-left_direction*PULSE_POWER);
-  right_motor.set_power(-right_direction*PULSE_POWER);
+  left_motor.set_power(left_direction*PULSE_POWER);
+  right_motor.set_power(right_direction*PULSE_POWER);
   delay(PULSE_DELAY);
   left_motor.set_power(0);
   right_motor.set_power(0);
@@ -135,13 +137,18 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
   avg_ticks = 0;
   accum_tick_dif = 0;
 
-  left_motor.set_power(left_direction*avg_power);
+  retro_pulse(left_direction, right_direction);
+
+  left_motor.set_power(left_direction*avg_power*L2R_RATIO);
   right_motor.set_power(right_direction*avg_power);
 
   while (avg_ticks < total_ticks)
   {
     // Tick update
     avg_ticks = (left_ticks()*left_direction+right_ticks()*right_direction)/2;
+    p(left_motor.power);
+    p(right_motor.power);
+    Serial.println();
     
     // PID
     tick_dif = left_direction*left_ticks()-right_direction*right_ticks();
@@ -155,7 +162,7 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
     delay(DELAY);
   }
 
-  retro_pulse(left_direction, right_direction);  
+  retro_pulse(-left_direction, -right_direction);  
 }
 
 void forward(int ticks)
@@ -168,10 +175,10 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(-1, 1, 100, degrees_clockwise/11.25);
+    move_PID(-1, 1, 100, degrees_clockwise/10);
   } else
   {
-    move_PID(1, -1, 100, -degrees_clockwise/11.25);
+    move_PID(1, -1, 100, -degrees_clockwise/10);
   } 
   delay(200);
 }
