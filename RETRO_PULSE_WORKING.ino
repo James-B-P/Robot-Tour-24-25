@@ -1,3 +1,19 @@
+// Instructions
+const int INSTRUCTIONS_LEN = 10;
+const int instructions[INSTRUCTIONS_LEN][2] = 
+{
+  {  0,    0},
+  { 16,    0},
+  { 16,   32},
+  {-16,   32},
+  {-16,    0},
+  { 16,    0},
+  { 16,  -32},
+  {-16,  -32},
+  {-16,    0},
+  {  0,    0}
+};
+
 // Pin Constants
 const int MLE = 7;
 const int MLA = 6;
@@ -19,6 +35,10 @@ const float L2R_RATIO = 0.7;
 // Pulse constants
 const int PULSE_POWER = 255;
 const int PULSE_DELAY = 50;
+
+// Movement constants
+int TIME = 30000;
+float TPMS = .017;
 
 class Motor
 {
@@ -66,8 +86,12 @@ class Motor
     const int Interrupt;
 };
 
+// Motor setup
 Motor left_motor(MLA, MLB, MLE, INL);
 Motor right_motor(MRA, MRB, MRE, INR);
+volatile int robot_direction = 0;
+volatile int robot_x = 0;
+volatile int robot_y = 0;
 
 volatile bool paused = true;
 
@@ -124,7 +148,7 @@ void retro_pulse(int left_direction, int right_direction)
   right_motor.set_power(0);
 }
 
-void move_PID(int left_direction, int right_direction, int avg_power, int total_ticks)
+void move_PID(int left_direction, int right_direction, int avg_power, float total_ticks)
 {
   int avg_ticks;
   int tick_dif;
@@ -175,12 +199,22 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(1, -1, 100, degrees_clockwise/10);
+    move_PID(1, -1, 100, degrees_clockwise*17/180);
   } else
   {
-    move_PID(-1, 1, 100, -degrees_clockwise/10);
+    move_PID(-1, 1, 100, -degrees_clockwise*17/180);
   } 
   delay(200);
+}
+
+void rotate_to(int new_direction)
+{
+  int dir_change = (new_direction-robot_direction+2)%4-2;
+  if (dir_change != 0)
+  {
+    turn(90*dir_change);
+  }
+  robot_direction += dir_change;
 }
 
 
@@ -197,25 +231,33 @@ void setup()
 void loop()
 {
   delay(500);
-  
-  forward(16);
-  turn(90);
-  forward(32);
-  turn(90);
-  forward(32);
-  turn(90);
-  forward(32);
-  turn(90);
-  forward(32);
-  turn(-90);
-  forward(32);
-  turn(-90);
-  forward(32);
-  turn(-90);
-  forward(32);
-  turn(-90);
-  forward(16);
+  int x_move;
+  int y_move;
 
+  for (int i = 0; i < INSTRUCTIONS_LEN; i++)
+  {
+    x_move = instructions[i][0]-robot_x;
+    y_move = instructions[i][1]-robot_y;
+    if (x_move > 0)
+    {
+      rotate_to(1);
+      forward(x_move);
+    } else if (x_move < 0)
+    {
+      rotate_to(3);
+      forward(-x_move);
+    } else if (y_move > 0)
+    {
+      rotate_to(0);
+      forward(y_move);
+    } else if (y_move < 0)
+    {
+      rotate_to(2);
+      forward(-y_move);
+    }
+    robot_x += x_move;
+    robot_y += y_move;
+  }
   
   while (true){}
 }
