@@ -44,7 +44,7 @@ const float TICKS_PER_CM = 1;
 
 // Pulse constants
 const int PULSE_POWER = 255;
-const int PULSE_DELAY = 50;
+const int PULSE_DELAY = 0;
 
 // Motor class: Used to simplify interactions between program and physical motors
 class Motor
