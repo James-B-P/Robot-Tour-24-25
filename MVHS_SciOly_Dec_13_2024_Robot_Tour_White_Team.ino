@@ -39,12 +39,12 @@ const float K_P = 0.125;
 const float K_I = 0.000005;
 const float K_D = 250;
 const int DELAY = 50;
-const float L2R_RATIO = 0.7;
+const float L2R_RATIO = 1;
 const float TICKS_PER_CM = 1;
 
 // Pulse constants
 const int PULSE_POWER = 255;
-const int PULSE_DELAY = 0;
+const int PULSE_DELAY = 20;
 
 // Motor class: Used to simplify interactions between program and physical motors
 class Motor
