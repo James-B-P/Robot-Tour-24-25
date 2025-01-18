@@ -2,20 +2,14 @@
 // as a matrix of points it passes. Currently, adjacent points must share either an x value or
 // a y value.
 // INSTRUCTIONS_LEN must be equal to the number of points in the instructions matrix.
-const int INSTRUCTIONS_LEN = 10; 
-// Example matrix of instructions to trace a figure eight:
+const int INSTRUCTIONS_LEN = 4; 
+// Example matrix of instructions to trace a box:
 const int instructions[INSTRUCTIONS_LEN][2] = 
 {
-  {  0,    0},
-  { 16,    0},
-  { 16,   32},
-  {-16,   32},
-  {-16,    0},
-  { 16,    0},
-  { 16,  -32},
-  {-16,  -32},
-  {-16,    0},
-  {  0,    0}
+  {0, 0},
+  {0, 100},
+  {100, 100},
+  {100, 0}
 };
 // Robot's starting position and orientation
 volatile int robot_direction = 0;
@@ -35,12 +29,12 @@ const int INR = 19;
 const int BUTTON = 21;
 
 // Motor control constants
-const float K_P = 0.125;
-const float K_I = 0.000005;
-const float K_D = 250;
-const int DELAY = 50;
-const float L2R_RATIO = 1;
-const float TICKS_PER_CM = 1;
+const float K_P = .05;
+const float K_I = 0.00000000001;
+const float K_D = 17;
+const int DELAY = 25;
+const float L2R_RATIO = 1.01;
+const float TICKS_PER_CM = 0.9;
 
 // Pulse constants
 const int PULSE_POWER = 255;
@@ -163,7 +157,7 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
   avg_ticks = 0;
   integrated_tick_dif = 0;
 
-  retro_pulse(left_direction, right_direction);
+  // retro_pulse(left_direction, right_direction);
 
   left_motor.set_power(left_direction*avg_power*L2R_RATIO);
   right_motor.set_power(right_direction*avg_power);
@@ -198,7 +192,7 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
 
 void forward(int cm)
 {
-  move_PID(1, 1, 100, (int)(TICKS_PER_CM*cm));
+  move_PID(1, 1, 80, (int)(TICKS_PER_CM*cm));
   delay(200);
 }
 
@@ -206,10 +200,10 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(1, -1, 100, degrees_clockwise*17/180);
+    move_PID(1, -1, 80, degrees_clockwise*18/180);
   } else
   {
-    move_PID(-1, 1, 100, -degrees_clockwise*17/180);
+    move_PID(-1, 1, 80, -degrees_clockwise*18/180);
   } 
   delay(200);
 }
