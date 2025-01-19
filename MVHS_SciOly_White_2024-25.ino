@@ -2,7 +2,7 @@
 // as a matrix of points it passes. Currently, adjacent points must share either an x value or
 // a y value.
 // INSTRUCTIONS_LEN must be equal to the number of points in the instructions matrix.
-const int INSTRUCTIONS_LEN = 10; 
+const int INSTRUCTIONS_LEN = 9; 
 // Example matrix of instructions to trace a figure eight:
 const int instructions[INSTRUCTIONS_LEN][2] = 
 {
