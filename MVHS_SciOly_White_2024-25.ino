@@ -5,10 +5,9 @@
 const int INSTRUCTIONS_LEN = 2; 
 // Example matrix of instructions to trace a figure eight:
 const int instructions[INSTRUCTIONS_LEN][2] = 
-
 {
   {0, 0},
-  {0, 900},
+  {0, 900}
 };
 // Robot's starting position and orientation
 volatile int robot_direction = 0;
@@ -28,11 +27,11 @@ const int INR = 19;
 const int BUTTON = 21;
 
 // Motor control constants
-const float K_P = 0.0085;
-const float K_I = 0.0000000005;
-const float K_D = 0.0000000000005;
+const float K_P = .05;           // 0.0085
+const float K_I = 0.00000000001; // 0.0000000005
+const float K_D = 17;            // 0.0000000000005
 const int DELAY = 1;
-const float L2R_RATIO = 0.94;
+const float L2R_RATIO = 0.98;
 const float TICKS_PER_UNIT = 1;
 
 // Pulse constants
