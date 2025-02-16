@@ -2,12 +2,18 @@
 // as a matrix of points it passes. Currently, adjacent points must share either an x value or
 // a y value.
 // INSTRUCTIONS_LEN must be equal to the number of points in the instructions matrix.
-const int INSTRUCTIONS_LEN = 2; 
+const int INSTRUCTIONS_LEN = 8; 
 // Example matrix of instructions to trace a figure eight:
 const int instructions[INSTRUCTIONS_LEN][2] = 
 {
+  {50, 0},
+  {50, 50},
+  {0, 50},
   {0, 0},
-  {0, 900}
+  {50, 0},
+  {50, -50},
+  {0, -50},
+  {0, 0}
 };
 // Robot's starting position and orientation
 volatile int robot_direction = 0;
@@ -27,16 +33,16 @@ const int INR = 19;
 const int BUTTON = 21;
 
 // Motor control constants
-const float K_P = .05;           // 0.0085
-const float K_I = 0.00000000001; // 0.0000000005
-const float K_D = 17;            // 0.0000000000005
+const float K_P =  10;
+const float K_I =  0.01;
+const float K_D =  1;
 const int DELAY = 1;
-const float L2R_RATIO = 0.98;
+const float L2R_RATIO = 0.95;
 const float TICKS_PER_UNIT = 1;
 
 // Pulse constants
 const int PULSE_POWER = 255;
-const int PULSE_DELAY = 25;
+const int PULSE_DELAY = 0;
 
 // Motor class: Used to simplify interactions between program and physical motors
 class Motor
@@ -45,26 +51,37 @@ class Motor
     Motor(int InA, int InB, int En):InA(InA), InB(InB), En(En){};
     volatile float power = 0;
     volatile int ticks = 0;
-    volatile float prev_power = 1;
 
     // Updates signal to L298N
     void run()
     {
+      if (power > 0)
+      {
       analogWrite(En, (int)(power));
       digitalWrite(InA, LOW);
       digitalWrite(InB, HIGH);
+      }
       if (power < 0)
       {
         analogWrite(En, (int)(-power));
         digitalWrite(InA, HIGH);
         digitalWrite(InB, LOW);
       }
+      if (power == 0)
+      {
+        stop();
+      }
+    }
+
+    void stop()
+    {
+      analogWrite(En, 255);
+      digitalWrite(InA, LOW);
+      digitalWrite(InB, LOW);
     }
 
     void set_power(float newPower)
     {
-      if (newPower == 0 && power != 0)
-        prev_power = power;
       power = min(255, max(-255, newPower));
       run();
     }
@@ -92,10 +109,7 @@ Motor right_motor(MRA, MRB, MRE);
 // Tracks wheel encoder ticks
 void incL()
 {
-  if (left_motor.power == 0)
-  {
-    left_motor.ticks += abs(left_motor.prev_power)/left_motor.prev_power;
-  } else
+  if (left_motor.power != 0)
   {
     left_motor.ticks += abs(left_motor.power)/left_motor.power;
   }
@@ -103,10 +117,7 @@ void incL()
 
 void incR()
 {
-  if (right_motor.power == 0)
-  {
-    right_motor.ticks += abs(right_motor.prev_power)/right_motor.prev_power;
-  } else
+  if (right_motor.power != 0)
   {
     right_motor.ticks += abs(right_motor.power)/right_motor.power;
   }
@@ -135,10 +146,10 @@ void retro_pulse(int left_direction, int right_direction)
 
 // Using PID motor control, rotates motors in a given direction for a given length
 //   • left_direction and right_direction are ints either -1 or 1
-//   • avg_power is an int between 0 and 255
+//   • base_power is an int between 0 and 255
 //   • total_ticks is a positive int corresponding to the total number of wheel encoder 
 //     ticks counted in the movement
-void move_PID(int left_direction, int right_direction, int avg_power, int total_ticks)
+void move_PID(int left_direction, int right_direction, int base_power, int total_ticks)
 {
   int avg_ticks;
   int tick_dif;
@@ -147,19 +158,26 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
   int prev_tick_dif;
   unsigned long prevMillis;
   unsigned long startMillis;
+  unsigned long nowMillis;
   unsigned long deltaTime;
   int ticksL;
   int ticksR;
+  float left_base;
+  float right_base;
 
   left_motor.ticks = 0;
   right_motor.ticks = 0;
   avg_ticks = 0;
   integrated_tick_dif = 0;
+  left_base = base_power*L2R_RATIO;
+  right_base = base_power;
+
+  int time = 0;
 
   // retro_pulse(left_direction, right_direction);
 
-  left_motor.set_power(left_direction*avg_power*L2R_RATIO);
-  right_motor.set_power(right_direction*avg_power);
+  left_motor.set_power(left_direction*left_base);
+  right_motor.set_power(right_direction*right_base);
 
   prevMillis = millis();
   startMillis = millis();
@@ -167,9 +185,11 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
   while (avg_ticks < total_ticks)
   {
     // Timing
+    time+=1;
     delay(DELAY);
-    deltaTime = millis()-prevMillis;
-    prevMillis = millis();
+    nowMillis = millis();
+    deltaTime = nowMillis-prevMillis;
+    prevMillis = nowMillis;
 
     // Access encoder ticks
     ticksL = left_ticks();
@@ -185,7 +205,7 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
     // PID control
     tick_dif = left_direction*ticksL-right_direction*ticksR;
     integrated_tick_dif += tick_dif*deltaTime;
-    if (millis()-startMillis > 2*DELAY)
+    if (nowMillis-startMillis > 2*DELAY)
     {
       PID = K_P*tick_dif + K_I*integrated_tick_dif + K_D*(tick_dif-prev_tick_dif)/deltaTime;
     } else
@@ -201,15 +221,14 @@ void move_PID(int left_direction, int right_direction, int avg_power, int total_
     // Serial.print(K_I*integrated_tick_dif);
     // Serial.print(",");
     // Serial.println(K_D*(tick_dif-prev_tick_dif)/deltaTime);'
-    Serial.print(ticksL);
-    Serial.print(",");
-    Serial.println(ticksR);
     prev_tick_dif = tick_dif;
-    left_motor.dec_power(left_direction*PID);
-    right_motor.inc_power(right_direction*PID);
+    left_motor.set_power(left_direction*(left_base-PID));
+    right_motor.set_power(right_direction*(right_base+PID));
+    Serial.println(PID);
   }
 
-  retro_pulse(-left_direction, -right_direction);  
+  left_motor.set_power(0);
+  right_motor.set_power(0);
 }
 
 void forward(int units)
