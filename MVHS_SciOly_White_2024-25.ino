@@ -2,18 +2,11 @@
 // as a matrix of points it passes. Currently, adjacent points must share either an x value or
 // a y value.
 // INSTRUCTIONS_LEN must be equal to the number of points in the instructions matrix.
-const int INSTRUCTIONS_LEN = 8; 
+const int INSTRUCTIONS_LEN = 1; 
 // Example matrix of instructions to trace a figure eight:
 const int instructions[INSTRUCTIONS_LEN][2] = 
 {
-  {50, 0},
-  {50, 50},
-  {0, 50},
-  {0, 0},
-  {50, 0},
-  {50, -50},
-  {0, -50},
-  {0, 0}
+  {0, 400},
 };
 // Robot's starting position and orientation
 volatile int robot_direction = 0;
@@ -33,11 +26,11 @@ const int INR = 19;
 const int BUTTON = 21;
 
 // Motor control constants
-const float K_P =  10;
-const float K_I =  0.01;
-const float K_D =  1;
+const float K_P =  20;//10;
+const float K_I =  0.01;//0.01;
+const float K_D =  0.005;//1;
 const int DELAY = 1;
-const float L2R_RATIO = 0.95;
+const float L2R_RATIO = 0.97;
 const float TICKS_PER_UNIT = 1;
 
 // Pulse constants
@@ -149,7 +142,7 @@ void retro_pulse(int left_direction, int right_direction)
 //   • base_power is an int between 0 and 255
 //   • total_ticks is a positive int corresponding to the total number of wheel encoder 
 //     ticks counted in the movement
-void move_PID(int left_direction, int right_direction, int base_power, int total_ticks)
+void move_PID(int left_direction, int right_direction, int slow_power, float acc_millis, float base_power, int total_ticks)
 {
   int avg_ticks;
   int tick_dif;
@@ -169,8 +162,8 @@ void move_PID(int left_direction, int right_direction, int base_power, int total
   right_motor.ticks = 0;
   avg_ticks = 0;
   integrated_tick_dif = 0;
-  left_base = base_power*L2R_RATIO;
-  right_base = base_power;
+  left_base = slow_power*L2R_RATIO;
+  right_base = slow_power;
 
   int time = 0;
 
@@ -205,13 +198,8 @@ void move_PID(int left_direction, int right_direction, int base_power, int total
     // PID control
     tick_dif = left_direction*ticksL-right_direction*ticksR;
     integrated_tick_dif += tick_dif*deltaTime;
-    if (nowMillis-startMillis > 2*DELAY)
-    {
-      PID = K_P*tick_dif + K_I*integrated_tick_dif + K_D*(tick_dif-prev_tick_dif)/deltaTime;
-    } else
-    {
-      PID = 0;
-    }
+    PID = K_P*tick_dif + K_I*integrated_tick_dif + K_D*(tick_dif-prev_tick_dif)/deltaTime;
+    
     // Serial.print(tick_dif);
     // Serial.print(",");
     // Serial.print(avg_ticks);
@@ -224,6 +212,13 @@ void move_PID(int left_direction, int right_direction, int base_power, int total
     prev_tick_dif = tick_dif;
     left_motor.set_power(left_direction*(left_base-PID));
     right_motor.set_power(right_direction*(right_base+PID));
+
+    if (right_base < base_power)
+    {
+      right_base += (base_power-slow_power)/acc_millis;
+      left_base = right_base*L2R_RATIO;
+    }
+
     Serial.println(PID);
   }
 
@@ -233,7 +228,7 @@ void move_PID(int left_direction, int right_direction, int base_power, int total
 
 void forward(int units)
 {
-  move_PID(1, 1, 90, (int)(TICKS_PER_UNIT*units));
+  move_PID(1, 1, 80, 100, 100, (int)(TICKS_PER_UNIT*units));
   delay(200);
 }
 
@@ -241,10 +236,10 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(1, -1, 90, degrees_clockwise*18/180);
+    move_PID(1, -1, 80, 100, 100, degrees_clockwise*18/180);
   } else
   {
-    move_PID(-1, 1, 90, -degrees_clockwise*18/180);
+    move_PID(-1, 1, 80, 100, 100, -degrees_clockwise*18/180);
   } 
   delay(200);
 }
