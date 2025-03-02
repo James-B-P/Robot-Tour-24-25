@@ -26,11 +26,12 @@ const int INR = 19;
 const int BUTTON = 21;
 
 // Motor control constants
-const float K_P =  20;//10;
-const float K_I =  0.01;//0.01;
-const float K_D =  0.005;//1;
+const float K_P =  10;//10;
+const float K_I =  0;//0.01;
+const float K_D =  1;//1;
 const int DELAY = 1;
-const float L2R_RATIO = 0.97;
+const float L2R_RATIO = 1;
+const float L2R_SIZE = 1.003;
 const float TICKS_PER_UNIT = 1;
 
 // Pulse constants
@@ -185,7 +186,7 @@ void move_PID(int left_direction, int right_direction, int slow_power, float acc
     prevMillis = nowMillis;
 
     // Access encoder ticks
-    ticksL = left_ticks();
+    ticksL = left_ticks()*L2R_SIZE;
     ticksR = right_ticks();
 
     // Serial.print(ticksL);
@@ -219,7 +220,7 @@ void move_PID(int left_direction, int right_direction, int slow_power, float acc
       left_base = right_base*L2R_RATIO;
     }
 
-    Serial.println(PID);
+    Serial.println(K_I*integrated_tick_dif);
   }
 
   left_motor.set_power(0);
@@ -228,7 +229,7 @@ void move_PID(int left_direction, int right_direction, int slow_power, float acc
 
 void forward(int units)
 {
-  move_PID(1, 1, 80, 100, 100, (int)(TICKS_PER_UNIT*units));
+  move_PID(1, 1, 80, 50, 100, (int)(TICKS_PER_UNIT*units));
   delay(200);
 }
 
@@ -236,10 +237,10 @@ void turn(int degrees_clockwise)
 {
   if (degrees_clockwise > 0)
   {
-    move_PID(1, -1, 80, 100, 100, degrees_clockwise*18/180);
+    move_PID(1, -1, 80, 50, 100, degrees_clockwise*18/180);
   } else
   {
-    move_PID(-1, 1, 80, 100, 100, -degrees_clockwise*18/180);
+    move_PID(-1, 1, 80, 50, 100, -degrees_clockwise*18/180);
   } 
   delay(200);
 }
